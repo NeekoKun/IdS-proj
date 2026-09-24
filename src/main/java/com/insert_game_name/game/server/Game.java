@@ -1,4 +1,4 @@
-package com.insert_game_name.game.server;
+package main.java.com.insert_game_name.game.server;
 
 public class Game {
     private int score;

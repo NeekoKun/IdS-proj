@@ -1,4 +1,4 @@
-package com.insert_game_name.game.server;
+package main.java.com.insert_game_name.game.server;
 
 import java.util.List;
 import java.io.Serializable;
@@ -17,7 +17,7 @@ public class Lobby implements Serializable {
 
     public void addPlayer(Player player) {
         players.add(player);
-        sendLobbyUpdate();
+        //sendLobbyUpdate();
     }
 
     public void removePlayer(int id) {
@@ -34,9 +34,5 @@ public class Lobby implements Serializable {
 
     public String getGameState() {
         return game_state;
-    }
-
-    private void sendLobbyUpdate() {
-        Lobby 
     }
 }
