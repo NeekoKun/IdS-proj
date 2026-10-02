@@ -1,14 +1,18 @@
-package main.java.com.insert_game_name.game.server;
+package com.insert_game_name.game.server;
 
 import java.util.List;
-import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import org.json.JSONObject;
 
-public class Lobby implements Serializable {
+import com.insert_game_name.game.server.player.Player;
+import com.insert_game_name.game.server.player.PlayerState;
+
+public class Lobby {
     private static int count = 0;
     public int id;
     private List<Player> players = new LinkedList<Player>();
-    private String game_state; // open, starting, playing, closing, finished
+    private int game_state; // "open", "starting", "playing", "closing", "finished"
 
     public Lobby() {
         id = count++;
@@ -17,7 +21,7 @@ public class Lobby implements Serializable {
 
     public void addPlayer(Player player) {
         players.add(player);
-        //sendLobbyUpdate();
+        sendLobbyUpdate();
     }
 
     public void removePlayer(int id) {
@@ -32,7 +36,15 @@ public class Lobby implements Serializable {
         }
     }
 
-    public String getGameState() {
-        return game_state;
+    public LobbyState state() {
+        List<PlayerState> player_states = new ArrayList<PlayerState>();
+        
+        for (Player player : players) {
+            player_states.add(player.state());
+        }
+        
+        LobbyState state = new LobbyState(game_state, player_states);
+
+        return state;
     }
 }

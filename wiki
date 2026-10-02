@@ -1,0 +1,255 @@
+# Server
+
+## Outbox Events
+
+### Heartbeat
+
+> Used to signal to the other peer that the connection is still up.
+
+```json
+{
+    "ttl": <int>
+}
+```
+
+- `ttl`: How long the client should keep the connection open after this heartbeat.
+
+### Message
+
+> Used to send chat data to a client.
+
+```json
+{
+    "counter": <int>,
+    "private": <bool>,
+    "timestamp": <int>,
+    "author": <String>,
+    "content": <String>
+}
+```
+
+- `counter`: Increasing chat-message counter.
+- `private`: Whether this is a private message or a lobby message.
+- `timestamp`: Server timestamp when the message arrived.
+- `author`: Nickname of the message author.
+- `content`: Message contents.
+
+### ForcedDisconnect
+
+> Used to notify a client that it has been disconnected.
+
+```json
+{
+    "reason": <int>,
+    "message": <String>
+}
+```
+
+- `reason`: ID of the disconnect cause.
+- `message`: Optional user-facing explanation.
+
+### Notification
+
+> Announces lobby changes, such as players joining, state changes, game completion, or a winner being selected.
+
+```json
+{
+    "counter": <int>,
+    "type": <int>,
+    "lobby": <LobbyState>
+}
+```
+
+- `counter`: Increasing lobby-notification counter.
+- `type`: ID of the lobby update type.
+- `lobby`: Serialization of the new lobby state.
+
+### Update
+
+> Announces a game-state change.
+
+```json
+{
+    "counter": <int>,
+    "game_state": <GameState>
+}
+```
+
+- `counter`: Increasing game-state update counter.
+- `game_state`: Serialization of the new game state.
+
+### Error
+
+> Signals that a client event could not be processed.
+
+```json
+{
+    "id": <int>,
+    "type": <int>,
+    "message": <String>
+}
+```
+
+- `id`: ID of the event that caused the error.
+- `type`: ID of the error type.
+- `message`: Error description.
+
+### Ok
+
+> Signals that a client event was accepted.
+
+```json
+{
+    "id": <int>
+}
+```
+
+- `id`: ID of the accepted event.
+
+## Inbox Events
+
+Inbox events are sent by clients to the server. Every event has a unique client-generated `id`.
+
+### Heartbeat
+
+> Keeps the client connection alive.
+
+```json
+{
+    "id": <int>
+}
+```
+
+### Message
+
+> Sends a chat message.
+
+```json
+{
+    "id": <int>,
+    "private": <bool>,
+    "recipient": <String>,
+    "content": <String>
+}
+```
+
+- `private`: Whether the message is private.
+- `recipient`: Nickname of the recipient when `private` is `true`.
+- `content`: Message contents.
+
+### DisconnectAlert
+
+> Requests that the client disconnect from the server.
+
+```json
+{
+    "id": <int>,
+    "reason": <int>
+}
+```
+
+- `reason`: Client-provided disconnect reason.
+
+### NotificationOffer
+
+> Requests a lobby action that changes lobby state.
+
+```json
+{
+    "id": <int>,
+    "type": <int>,
+    "data": <String>
+}
+```
+
+- `type`: ID of the requested lobby action.
+- `data`: Action-specific parameters.
+
+### Offer
+
+> Offers a game action to the server.
+
+```json
+{
+    "id": <int>,
+    "type": <int>,
+    "data": <String>
+}
+```
+
+- `type`: ID of the game action.
+- `data`: Action-specific parameters.
+
+## Player State
+
+A player is a client connected to the server. A player's nickname is unique outside the current match and remains associated with that client across lobbies.
+
+```json
+{
+    "nickname": <String>,
+    "connected": <bool>
+}
+```
+
+- `nickname`: Globally unique player nickname.
+- `connected`: Whether the player currently has an active connection.
+
+## Lobby State
+
+The lobby contains players before and during a match.
+
+```json
+{
+    "state": <int>,
+    "players": [
+        <PlayerState>
+    ]
+}
+```
+
+- `state`: Current lobby-state number.
+- `players`: List of players in the lobby.
+
+## Character State
+
+A character belongs to a game in the same way that a player belongs to a lobby. Character state contains information about a player's in-game entity.
+
+### Character Public State
+
+> Information visible to other players.
+
+```json
+{
+    #Random stuff to add later
+}
+```
+N/A
+
+### Character Private State
+
+> Information visible only to the owning player.
+
+```json
+{
+    #Random, more intimate stuff to add later
+}
+```
+Still N/A bruh
+
+## Game State
+
+The game state contains the current game number, shared game information, and character states.
+
+```json
+{
+    "state": <int>,
+    #Smth idkk
+    "characters": [
+        <CharacterPublicState>
+    ],
+    "shared": {
+        #Communism WIP
+    }
+}
+```
+Expected this to not be N/A?

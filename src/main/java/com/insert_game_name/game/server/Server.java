@@ -2,6 +2,9 @@ package com.insert_game_name.game.server;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.insert_game_name.game.server.player.Player;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -41,29 +44,29 @@ public class Server {
         boolean free = false;
         int index = -1;
 
-        // 1. Create a new Player instance
+        try {
+            // 1. Create a new Player instance
 
-        Player player = new Player(socket);
+            Player player = new Player(socket);
 
-        // 2. Choose a lobby or create a new one
+            // 2. Choose a lobby or create a new one
 
-        for (Lobby lobby : lobbies) {
-            if (lobby.getGameState().equals("open")) {
-                free = true;
-                index = lobbies.indexOf(lobby);
-                break;
+            for (Lobby lobby : lobbies) {
+                if (lobby.getGameState().equals("open")) {
+                    free = true;
+                    index = lobbies.indexOf(lobby);
+                    break;
+                }
             }
+
+            if (!free) {
+                lobbies.add(new Lobby());
+                index = lobbies.size() - 1;
+            }
+
+            lobbies.get(index).addPlayer(player);
+        } catch (IOException e) {
+            return;
         }
-
-        if (!free) {
-            lobbies.add(new Lobby());
-            index = lobbies.size() - 1;
-        }
-
-        lobbies.get(index).addPlayer(player);
-
-        // 3. Send lobby informations to the client
-
-        
     }
 }
