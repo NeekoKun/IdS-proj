@@ -1,9 +1,9 @@
 package com.insert_game_name.game.server.event;
 
-import org.json.JSONObject;
+import com.insert_game_name.game.server.LobbyState;
 
 public record ServerNotification(
     int counter, 
     int type,
-    JSONObject lobby
+    LobbyState lobby
 ) implements ServerEvent {}

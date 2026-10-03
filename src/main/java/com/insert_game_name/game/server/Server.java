@@ -1,8 +1,11 @@
 package com.insert_game_name.game.server;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insert_game_name.game.server.player.Player;
 
 import java.io.IOException;
@@ -20,19 +23,21 @@ import java.net.Socket;
  */
 
 public class Server {
-	private static List<Lobby> lobbies = new ArrayList<Lobby>();
+    private static final Map<Integer, Lobby> lobbies = new HashMap<>();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ExecutorService lobbyPool = Executors.newVirtualThreadPerTaskExecutor();
+    private static final ExecutorService playerPool = Executors.newVirtualThreadPerTaskExecutor();
 
     public static void main(String[] args) {
         // TODO: Load from file
 
         // Listen to clients
-        try (ServerSocket server_socket = new ServerSocket(4321)) {
-            server_socket.setReuseAddress(true);
+        try (ServerSocket serverSocket = new ServerSocket(4321)) {
+            serverSocket.setReuseAddress(true);
 
-            while (true) {
-                Socket connection = server_socket.accept();
-
-                handle_connection(connection);
+            while (!serverSocket.isClosed()) {
+                Socket connection = serverSocket.accept();
+                Thread.startVirtualThread(() -> handleConnection(connection));
             }
 
         } catch (IOException e) {
@@ -40,33 +45,25 @@ public class Server {
         }
 	}
 
-    public static void handle_connection(Socket socket) {
-        boolean free = false;
-        int index = -1;
+    private static Integer findOrCreateLobby() {
+        for (Lobby lobby : lobbies.values()) {
+            if (lobby.gameState == 0) return lobby.id;
+        }
+        
+        Lobby newLobby = new Lobby(playerPool);
+        lobbies.put(newLobby.id, newLobby);
+        lobbyPool.submit(newLobby);
+        return newLobby.id;
+    }
 
+    private static void handleConnection(Socket connection) {
         try {
-            // 1. Create a new Player instance
+            Player player = new Player(connection, MAPPER);
+            Integer lobbyId = findOrCreateLobby();
 
-            Player player = new Player(socket);
-
-            // 2. Choose a lobby or create a new one
-
-            for (Lobby lobby : lobbies) {
-                if (lobby.getGameState().equals("open")) {
-                    free = true;
-                    index = lobbies.indexOf(lobby);
-                    break;
-                }
-            }
-
-            if (!free) {
-                lobbies.add(new Lobby());
-                index = lobbies.size() - 1;
-            }
-
-            lobbies.get(index).addPlayer(player);
-        } catch (IOException e) {
-            return;
+            lobbies.get(lobbyId).addPlayer(player);
+        } catch (IOException exception) {
+            System.out.println("Error handling a connection to player");
         }
     }
 }

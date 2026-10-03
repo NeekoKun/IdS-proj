@@ -1,27 +1,45 @@
 package com.insert_game_name.game.server;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.ArrayList;
 import java.util.LinkedList;
-import org.json.JSONObject;
 
+import com.insert_game_name.game.client.events.ClientEvent;
 import com.insert_game_name.game.server.player.Player;
 import com.insert_game_name.game.server.player.PlayerState;
 
-public class Lobby {
+public class Lobby implements Runnable {
     private static int count = 0;
     public int id;
     private List<Player> players = new LinkedList<Player>();
-    private int game_state; // "open", "starting", "playing", "closing", "finished"
+    public int gameState; // "open", "starting", "playing", "closing", "finished"
+    private ExecutorService playerPool;
+    private LinkedBlockingQueue<ClientEvent> inbox;
 
-    public Lobby() {
+    public Lobby(ExecutorService pool) {
         id = count++;
-        game_state = "open";
+        gameState = 0;
+        playerPool = pool;
+        inbox = new LinkedBlockingQueue<ClientEvent>();
+    }
+
+    @Override 
+    public void run() {
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                ClientEvent event = inbox.take();
+                //Handle Event
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     public void addPlayer(Player player) {
         players.add(player);
-        sendLobbyUpdate();
+        player.start(playerPool, inbox);
     }
 
     public void removePlayer(int id) {
@@ -29,6 +47,7 @@ public class Lobby {
         for (Player player : players) {
 
             if (player.id == id) {
+                player.stop();
                 players.remove(index);
             }
 
@@ -43,7 +62,7 @@ public class Lobby {
             player_states.add(player.state());
         }
         
-        LobbyState state = new LobbyState(game_state, player_states);
+        LobbyState state = new LobbyState(gameState, player_states);
 
         return state;
     }
