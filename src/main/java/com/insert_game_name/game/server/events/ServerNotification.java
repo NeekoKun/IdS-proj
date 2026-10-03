@@ -1,4 +1,4 @@
-package com.insert_game_name.game.server.event;
+package com.insert_game_name.game.server.events;
 
 import com.insert_game_name.game.server.LobbyState;
 

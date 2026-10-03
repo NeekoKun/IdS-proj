@@ -1,36 +1,56 @@
 package com.insert_game_name.game.server;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashMap;
 
-import com.insert_game_name.game.client.events.ClientEvent;
-import com.insert_game_name.game.server.player.Player;
-import com.insert_game_name.game.server.player.PlayerState;
+import com.insert_game_name.game.client.events.*;
+import com.insert_game_name.game.server.events.ServerForcedDisconnect;
+import com.insert_game_name.game.server.player.*;
 
 public class Lobby implements Runnable {
     private static int count = 0;
     public int id;
-    private List<Player> players = new LinkedList<Player>();
+    private final Map<String, Player> players = new HashMap<String, Player>();
     public int gameState; // "open", "starting", "playing", "closing", "finished"
     private ExecutorService playerPool;
-    private LinkedBlockingQueue<ClientEvent> inbox;
+    private LinkedBlockingQueue<PlayerEvent> inbox;
 
     public Lobby(ExecutorService pool) {
         id = count++;
         gameState = 0;
         playerPool = pool;
-        inbox = new LinkedBlockingQueue<ClientEvent>();
+        inbox = new LinkedBlockingQueue<PlayerEvent>();
     }
 
     @Override 
     public void run() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                ClientEvent event = inbox.take();
-                //Handle Event
+                PlayerEvent playerEvent = inbox.take();
+                ClientEvent event = playerEvent.event();
+                Player player = playerEvent.player();
+                switch (event) {
+                    case ClientHello clientHelloEvent -> {
+                        player.latestSignal = System.currentTimeMillis();
+                    }
+                    case ClientHeartbeat clientHeartbeatEvent -> {
+                        player.latestSignal = System.currentTimeMillis();
+                    }
+                    case ClientDisconnectAlert clientDisconnectAlert -> {
+                        player.send(new ServerForcedDisconnect(ServerForcedDisconnect.ACCEPTED_DISCONNECT, null));
+                    }
+                    case ClientNotificationOffer clientNotificationOffer -> {
+                        if (!player.lobbyAdmin) break;
+                        //TODO: process notification
+                    }
+                    case ClientOffer clientOffer -> {
+                        //TODO: pass offer to game
+                    }
+                }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -38,31 +58,27 @@ public class Lobby implements Runnable {
     }
 
     public void addPlayer(Player player) {
-        players.add(player);
+        players.put(player.username, player);
+        if (players.size() == 1) {
+            player.lobbyAdmin = true;
+        }
         player.start(playerPool, inbox);
     }
 
-    public void removePlayer(int id) {
-        int index = 0;
-        for (Player player : players) {
-
-            if (player.id == id) {
-                player.stop();
-                players.remove(index);
-            }
-
-            index++;
-        }
+    public void removePlayer(String username) {
+        //TODO: Send a ServerForcedDisconnect event
+        players.get(username).stop();
+        players.remove(username);
     }
 
     public LobbyState state() {
-        List<PlayerState> player_states = new ArrayList<PlayerState>();
+        List<PlayerState> playerStates = new ArrayList<PlayerState>(players.size());
         
-        for (Player player : players) {
-            player_states.add(player.state());
+        for (Player player : players.values()) {
+            playerStates.add(player.state());
         }
         
-        LobbyState state = new LobbyState(gameState, player_states);
+        LobbyState state = new LobbyState(gameState, playerStates);
 
         return state;
     }

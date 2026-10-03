@@ -120,6 +120,16 @@ Inbox events are sent by clients to the server. Every event has a unique client-
 }
 ```
 
+### Hello
+
+> Sends data to the server about the player, once connection is enstablished
+
+```json
+{
+    "id": <int>,
+    "username": <String>
+}
+
 ### Message
 
 > Sends a chat message.
