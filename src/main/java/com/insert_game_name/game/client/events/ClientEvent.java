@@ -14,7 +14,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 public sealed interface ClientEvent
     permits
         ClientHeartbeat,
-        ClientHello,
         ClientMessage,
         ClientDisconnectAlert,
         ClientNotificationOffer,

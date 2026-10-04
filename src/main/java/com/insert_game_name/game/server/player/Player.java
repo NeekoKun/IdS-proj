@@ -22,9 +22,10 @@ public class Player {
     public static int count = 0;
     public int id;
     public Socket socket;
-    public String username;
+    public final String username;
     public long latestSignal;
     public boolean lobbyAdmin;
+    public final String token;
 
     // Components
     private LinkedBlockingQueue<ServerEvent> outbox;
@@ -33,12 +34,14 @@ public class Player {
     private Future<?> readerTask;
     private Future<?> writerTask;
 
-    public Player(Socket client_socket, ObjectMapper mapper) throws IOException {
+    public Player(Socket client_socket, ObjectMapper mapper, String user, String sessionToken) {
         id = count++;
         socket = client_socket;
         outbox = new LinkedBlockingQueue<ServerEvent>();
         MAPPER = mapper;
         latestSignal = System.currentTimeMillis();
+        username = user;
+        token = sessionToken;
     }
 
     public void send(ServerEvent event) {

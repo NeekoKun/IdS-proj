@@ -34,9 +34,6 @@ public class Lobby implements Runnable {
                 ClientEvent event = playerEvent.event();
                 Player player = playerEvent.player();
                 switch (event) {
-                    case ClientHello clientHelloEvent -> {
-                        player.latestSignal = System.currentTimeMillis();
-                    }
                     case ClientHeartbeat clientHeartbeatEvent -> {
                         player.latestSignal = System.currentTimeMillis();
                     }
@@ -46,9 +43,15 @@ public class Lobby implements Runnable {
                     case ClientNotificationOffer clientNotificationOffer -> {
                         if (!player.lobbyAdmin) break;
                         //TODO: process notification
+                        player.latestSignal = System.currentTimeMillis();
                     }
                     case ClientOffer clientOffer -> {
                         //TODO: pass offer to game
+                        player.latestSignal = System.currentTimeMillis();
+                    }
+                    case ClientMessage clientMessage -> {
+                        //TODO: Send chat message
+                        player.latestSignal = System.currentTimeMillis();
                     }
                 }
             }
