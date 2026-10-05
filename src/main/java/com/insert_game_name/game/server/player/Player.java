@@ -25,7 +25,7 @@ public class Player {
     public final String username;
     public long latestSignal;
     public boolean lobbyAdmin;
-    public final String token;
+    public boolean connected; // Signal whether the client is capable of interpreting Client/Server Event data
 
     // Components
     private LinkedBlockingQueue<ServerEvent> outbox;
@@ -34,14 +34,13 @@ public class Player {
     private Future<?> readerTask;
     private Future<?> writerTask;
 
-    public Player(Socket client_socket, ObjectMapper mapper, String user, String sessionToken) {
+    public Player(Socket client_socket, ObjectMapper mapper, String user) {
         id = count++;
         socket = client_socket;
         outbox = new LinkedBlockingQueue<ServerEvent>();
         MAPPER = mapper;
         latestSignal = System.currentTimeMillis();
         username = user;
-        token = sessionToken;
     }
 
     public void send(ServerEvent event) {
@@ -68,7 +67,8 @@ public class Player {
                     continue;
                 }
 
-                push(new PlayerEvent(this, event), inbox);
+                pushInbox(new PlayerEvent(this, event), inbox);
+                this.latestSignal = System.currentTimeMillis();
             }
         } catch (IOException e) {
             System.out.println("Error reading the data socket for player id ["+id+"]");
@@ -76,7 +76,7 @@ public class Player {
         }
     }
 
-    private void push(PlayerEvent playerEvent, LinkedBlockingQueue<PlayerEvent> inbox) {
+    private void pushInbox(PlayerEvent playerEvent, LinkedBlockingQueue<PlayerEvent> inbox) {
         boolean accepted;
         do {
             accepted = inbox.offer(playerEvent);

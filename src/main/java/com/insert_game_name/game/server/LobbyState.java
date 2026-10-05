@@ -8,6 +8,6 @@ import com.insert_game_name.game.server.player.PlayerState;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record LobbyState (
-    int state,
+    int version,
     List<PlayerState> playerState
 ) {}

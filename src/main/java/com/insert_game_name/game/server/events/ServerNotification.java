@@ -4,6 +4,6 @@ import com.insert_game_name.game.server.LobbyState;
 
 public record ServerNotification(
     int counter, 
-    int type,
+    Integer type,
     LobbyState lobby
 ) implements ServerEvent {}

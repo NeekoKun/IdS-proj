@@ -36,16 +36,16 @@ public class Server {
     private static final ExecutorService playerPool = Executors.newVirtualThreadPerTaskExecutor();
     private static Map<String, Player> loggedPlayers = new HashMap<String, Player>();
     private static Map<String, String> passwords = new HashMap<String, String>();
-    private static Path varDir;
+    private static Path dataDir;
 
     public static void main(String[] args) {
-        varDir = Paths.get("/var/lib/insert_game_name");
+        dataDir = dataDir();
 
-        if (Files.isDirectory(varDir)) {
+        if (Files.isDirectory(dataDir)) {
             //Get data from here
         } else {
             try {
-                Files.createDirectories(varDir);
+                Files.createDirectories(dataDir);
             } catch (IOException e) {
                 System.out.println("Not enough privileges to save data locally");
                 return;
@@ -72,9 +72,20 @@ public class Server {
         }
 	}
 
+    private static Path dataDir() {
+        String xdg = System.getenv("XDG_DATA_HOME");
+        Path base;
+        if(xdg != null && !xdg.isBlank() && Paths.get(xdg).isAbsolute()) {
+            base = Paths.get(xdg);
+        } else {
+            base = Paths.get(System.getProperty("user.home"), ".local", "share");
+        }
+        return base.resolve("insert_game_name");
+    }
+
     private static Integer findOrCreateLobby() {
         for (Lobby lobby : lobbies.values()) {
-            if (lobby.gameState == 0) return lobby.id;
+            if (lobby.lobbyPhase == 0) return lobby.id;
         }
         
         Lobby newLobby = new Lobby(playerPool);
@@ -88,7 +99,7 @@ public class Server {
     
         BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         BufferedWriter out = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-        Authenticator auth = new Authenticator(varDir, MAPPER);
+        Authenticator auth = new Authenticator(dataDir, MAPPER);
 
         boolean register;
         boolean result;
@@ -99,7 +110,12 @@ public class Server {
         login: while (true) {
 
             String data = in.readLine();
-        
+
+            if (data == null) {
+                System.out.println("[info] Client disconnected during authentication");
+                return;
+            }
+
             if (data.chars().filter(ch -> ch == '&').count() != 2 || data.chars().filter(ch -> ch == '=').count() != 3) {
                 System.out.println("[warn] Malformed access string from client");
                 out.write("MALFORMED");
@@ -127,7 +143,7 @@ public class Server {
                     out.flush();
                 }
             } else {
-                token = auth.login(username, password);
+                token = auth.login(username, password); //TODO: Will be implemented if and when there will be need for session resume
 
                 if (token != null) {
                     System.out.println("[info] Login successful for [" + username + "]");
@@ -144,7 +160,7 @@ public class Server {
             }
         }
 
-        Player player = new Player(connection, MAPPER, username, token);
+        Player player = new Player(connection, MAPPER, username);
 
         loggedPlayers.put(username, player);
         Integer lobbyId = findOrCreateLobby();

@@ -8,20 +8,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.insert_game_name.game.client.events.*;
-import com.insert_game_name.game.server.events.ServerForcedDisconnect;
+import com.insert_game_name.game.server.events.*;
 import com.insert_game_name.game.server.player.*;
 
 public class Lobby implements Runnable {
     private static int count = 0;
     public int id;
     private final Map<String, Player> players = new HashMap<String, Player>();
-    public int gameState; // "open", "starting", "playing", "closing", "finished"
+    public int lobbyPhase; // "open", "starting", "playing", "closing", "finished"
     private ExecutorService playerPool;
     private LinkedBlockingQueue<PlayerEvent> inbox;
+    private int version;
 
     public Lobby(ExecutorService pool) {
         id = count++;
-        gameState = 0;
+        lobbyPhase = 0;
+        version = 0;
         playerPool = pool;
         inbox = new LinkedBlockingQueue<PlayerEvent>();
     }
@@ -34,24 +36,39 @@ public class Lobby implements Runnable {
                 ClientEvent event = playerEvent.event();
                 Player player = playerEvent.player();
                 switch (event) {
+                    case ClientHello clientHello -> {
+                        if (!player.connected) {
+                            player.connected = true;
+                            player.send(new ServerOk(clientHello.id()));
+                        }
+                    }
                     case ClientHeartbeat clientHeartbeatEvent -> {
-                        player.latestSignal = System.currentTimeMillis();
+                        System.out.println(String.format("[info] User %s called a ClientHeartbeat", player.username));
                     }
                     case ClientDisconnectAlert clientDisconnectAlert -> {
+                        System.out.println(String.format("[info] User %s called a ClientDisconnectAlert", player.username));
                         player.send(new ServerForcedDisconnect(ServerForcedDisconnect.ACCEPTED_DISCONNECT, null));
                     }
                     case ClientNotificationOffer clientNotificationOffer -> {
+                        System.out.println(String.format("[info] User %s called a ClientNotificationOffer", player.username));
                         if (!player.lobbyAdmin) break;
                         //TODO: process notification
-                        player.latestSignal = System.currentTimeMillis();
                     }
                     case ClientOffer clientOffer -> {
+                        System.out.println(String.format("[info] User %s called a ClientOffer", player.username));
                         //TODO: pass offer to game
-                        player.latestSignal = System.currentTimeMillis();
+                    }
+                    case ClientRequestLobbyState clientRequestLobbyState -> {
+                        System.out.println(String.format("[info] User %s called a ClientRequestLobbyState", player.username));
+                        player.send(new ServerNotification(this.version, null, this.state()));
+                    }
+                    case ClientRequestGameState clientRequestGameState -> {   
+                        System.out.println(String.format("[info] User %s called a ClientRequestGameState", player.username));
+                        player.send(new ServerUpdate(0, null));
                     }
                     case ClientMessage clientMessage -> {
+                        System.out.println(String.format("[info] User %s called a ClientMessage with contents [%s]", player.username, clientMessage.content()));
                         //TODO: Send chat message
-                        player.latestSignal = System.currentTimeMillis();
                     }
                 }
             }
@@ -81,7 +98,7 @@ public class Lobby implements Runnable {
             playerStates.add(player.state());
         }
         
-        LobbyState state = new LobbyState(gameState, playerStates);
+        LobbyState state = new LobbyState(lobbyPhase, playerStates);
 
         return state;
     }
