@@ -4,8 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.insert_game_name.game.server.events.ServerForcedDisconnect;
 import com.insert_game_name.game.server.player.Player;
 
 import java.io.BufferedReader;
@@ -26,7 +28,6 @@ public class Server {
     private static final ExecutorService lobbyPool = Executors.newVirtualThreadPerTaskExecutor();
     private static final ExecutorService playerPool = Executors.newVirtualThreadPerTaskExecutor();
     private static Map<String, Player> loggedPlayers = new HashMap<String, Player>();
-    private static Map<String, String> passwords = new HashMap<String, String>();
     private static Path dataDir;
 
     /**
@@ -118,12 +119,12 @@ public class Server {
                 out.newLine();
                 out.flush();
                 return;
-            } 
+            }
         
             register = data.split("&")[0].split("=")[1].equals("true");
             username = data.split("&")[1].split("=")[1];
             password = data.split("&")[2].split("=")[1];
-        
+
             if (register) {
                 result = auth.register(username, password);
         
@@ -132,32 +133,50 @@ public class Server {
                     out.write("OK");
                     out.newLine();
                     out.flush();
+                    continue;
                 } else {
                     System.out.println("[warn] Registration unsuccessful for [" + username + "]");
-                    out.write("ERR");
-                    out.newLine();
-                    out.flush();
                 }
             } else {
                 token = auth.login(username, password); //TODO: Will be implemented if and when there will be need for session resume
 
                 if (token != null) {
                     System.out.println("[info] Login successful for [" + username + "]");
-                    out.write("OK");
-                    out.newLine();
-                    out.flush();
                     break login;
                 } else {
                     System.out.println("[warn] Login unsuccessful for [" + username + "]");
-                    out.write("ERR");
-                    out.newLine();
-                    out.flush();
                 }
             }
+            out.write("ERR");
+            out.newLine();
+            out.flush();
         }
 
-        Player player = new Player(connection, MAPPER, username);
+        
+        if (loggedPlayers.containsKey(username)) { //Should probably disconnect the first one
+            out.write("DISCONNECTING");
+            out.newLine();
+            out.flush();
 
+            loggedPlayers.get(username).disconnect(ServerForcedDisconnect.KICKED, "Another client logged in with your credentials");
+            
+            try {
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                System.out.println("WTF");
+            }
+            
+            if (!loggedPlayers.get(username).stopped()) {
+                System.out.println("[info] The player object did not stop after a soft disconnect");
+                loggedPlayers.get(username).stop();
+            }
+        }
+        out.write("OK");
+        out.newLine();
+        out.flush();
+
+        Player player = new Player(connection, MAPPER, username);
+        
         loggedPlayers.put(username, player);
         Integer lobbyId = findOrCreateLobby();
 

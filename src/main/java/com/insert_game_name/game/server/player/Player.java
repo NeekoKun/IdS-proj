@@ -4,6 +4,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Future;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -106,7 +107,7 @@ public class Player {
             }
             // Yada Yada connection closed
         } catch (InterruptedException e) {
-            System.out.println(e);
+            return;
         } catch (IOException e) {
             if (!stopped) {
                 System.out.println("Error writing for player id ["+id+"]");
@@ -123,6 +124,21 @@ public class Player {
     public void start(ExecutorService pool, LinkedBlockingQueue<PlayerEvent> inbox) {
         readerTask = pool.submit(() -> Reader(inbox));
         writerTask = pool.submit(() -> Writer());
+    }
+
+    /** Attempts to disconnect the player gracefully before calling {@code stop()} */
+    public void disconnect(int reason, String message) {
+        send(new ServerForcedDisconnect(reason, message));
+        
+        try {
+            TimeUnit.SECONDS.sleep(2);
+        } catch (InterruptedException e) {}
+        stop();
+    }
+
+    /** Getter for the stopped state */
+    public boolean stopped() {
+        return stopped;
     }
 
     /** Stops the I/O tasks, clears pending output, and closes the socket. */

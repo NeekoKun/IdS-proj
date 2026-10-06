@@ -30,11 +30,13 @@ public class Client {
     private final String username;
     private final Socket serverSocket;
     private final Scanner scanner;
-    private final ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
     private final BlockingQueue<ClientEvent> outbox = new LinkedBlockingQueue<ClientEvent>();
     private final BlockingQueue<ServerEvent> inbox  = new LinkedBlockingQueue<ServerEvent>();
     private List<LobbyState> lobbyHistory = new ArrayList<LobbyState>(20); //Never call outside of addLobbyState()
     private ObjectMapper MAPPER = new ObjectMapper();
+    private Thread inputThread;
+    private Thread readerThread;
+    private Thread writerThread;
 
     /**
      * Creates a client and initializes its lobby data and input mode.
@@ -49,8 +51,8 @@ public class Client {
         serverSocket = connection;
         scanner = scan;
         Thread input;
-        Thread reader = new Thread(() -> Reader());
-        Thread writer = new Thread(() -> Writer());
+        readerThread = new Thread(() -> Reader());
+        writerThread = new Thread(() -> Writer());
 
         
         switch (mode) {
@@ -62,9 +64,10 @@ public class Client {
                 return;
         }
 
-        reader.start();
-        writer.start();
-        input.start();
+            inputThread = input;
+            readerThread.start();
+            writerThread.start();
+            inputThread.start();
 
         try {
             handleEvents();
@@ -81,28 +84,43 @@ public class Client {
             event = inbox.take();
             switch (event) {
                 case ServerError error -> {
-
+                    System.out.println("[+] Received error response from server");
                 }
                 case ServerForcedDisconnect forcedDisconnect -> {
-
+                    System.out.println("[+] Received forced disconnect from server");
+                    shutdown();
+                    System.exit(0);
+                    return;
                 }
                 case ServerHeartbeat heartbeat -> {
-
+                    System.out.println("[+] Received heartbeat from server");
                 }
                 case ServerMessage message -> {
-
+                    System.out.println("[+] Received new chat message");
                 }
                 case ServerNotification notification -> {
                     System.out.println("[+] Received new lobby state from server");
                     addLobbyState(notification.lobby());
                 }
                 case ServerOk ok -> {
-
+                    System.out.println("[+] Received Ok");
                 }
                 case ServerUpdate update -> {
-
+                    System.out.println("[+] Received new game state from server");
                 }
             }
+        }
+    }
+
+    /** Stops client workers and closes the server connection. */
+    private void shutdown() {
+        if (inputThread != null) inputThread.interrupt();
+        if (readerThread != null) readerThread.interrupt();
+        if (writerThread != null) writerThread.interrupt();
+        try {
+            serverSocket.close();
+        } catch (IOException ignored) {
+            // The connection is already closed.
         }
     }
 
@@ -149,7 +167,7 @@ public class Client {
             }
             // Yada Yada connection closed
         } catch (InterruptedException e) {
-            System.out.println(e);
+            return;
         } catch (IOException e) {
             System.out.println("Connection dropped.");
         }
@@ -272,11 +290,23 @@ public class Client {
         out.newLine();
         out.flush();
 
-        if (in.readLine().equals("OK")) {
+        String response = in.readLine();
+
+        if (response.equals("OK")) {
             System.out.println("[info] Login succesful");
             return username;
+        } else  if (response.equals("DISCONNECTING")) {
+            System.out.println("[info] login successful, waiting for other user's disconnect");
+            response = in.readLine();
+            if (response.equals("OK")) {
+                System.out.println("[info] login successful");
+                return username;
+            } else {
+                System.out.println("[warn] something went wrong");
+                return null;
+            }
         } else {
-            System.out.println("[warn] login unsuccesful");
+            System.out.println("[warn] Login unsuccessful");
             return null;
         }
     }

@@ -46,7 +46,7 @@ public class Lobby implements Runnable {
                     case ClientHello clientHello -> {
                         if (!player.connected) {
                             player.connected = true;
-                            player.send(new ServerOk(clientHello.id()));
+                            player.send(new ServerOk(clientHello.id(), null));
                         }
                     }
                     case ClientHeartbeat clientHeartbeatEvent -> {
