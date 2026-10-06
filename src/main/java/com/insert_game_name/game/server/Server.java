@@ -19,16 +19,7 @@ import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/**
- * 
- * Server
- * 1. Read file for saved state
- * 2. Populate/create lobby list
- * 3. Accept connections to either
- *  a. New lobby if no lobby is open
- *  b. First open lobby (which should only be one)
- */
-
+/** Accepts client connections, authenticates users, and assigns them to lobbies. */
 public class Server {
     private static final Map<Integer, Lobby> lobbies = new HashMap<>();
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -38,6 +29,11 @@ public class Server {
     private static Map<String, String> passwords = new HashMap<String, String>();
     private static Path dataDir;
 
+    /**
+     * Starts the server, accepts socket connections, and dispatches authentication.
+     *
+     * @param args command-line arguments (currently unused)
+     */
     public static void main(String[] args) {
         dataDir = dataDir();
 

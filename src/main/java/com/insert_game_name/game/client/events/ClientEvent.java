@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
     @JsonSubTypes.Type(value = ClientRequestLobbyState.class,   name = "request_lobby_state"),
     @JsonSubTypes.Type(value = ClientRequestGameState.class,    name = "request_game_state"),
 })
+/** Base type for all events sent from a client to the server. */
 public sealed interface ClientEvent
     permits
         ClientHeartbeat,

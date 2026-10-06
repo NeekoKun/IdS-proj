@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+/** Stores user credentials and authenticates users against the local user database. */
 public final class Authenticator {
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
     private final Path database;
@@ -23,6 +24,12 @@ public final class Authenticator {
     private ArrayNode playerData;
     private final StringKeyGenerator TOKEN_GEN = new Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 32);
 
+    /**
+     * Creates an authenticator backed by {@code users.json} in the supplied directory.
+     *
+     * @param dir directory containing the user database
+     * @param mapper mapper used to read and write the JSON database
+     */
     public Authenticator(Path dir, ObjectMapper mapper) {
         database = dir.resolve("users.json");
         tempDatabase = dir.resolve("users.json.tmp");
@@ -47,6 +54,14 @@ public final class Authenticator {
         playerData = stored != null && stored.isArray() ? (ArrayNode) stored : MAPPER.createArrayNode();
     }
 
+    /**
+     * Registers a user and persists the password as a BCrypt hash.
+     *
+     * @param user username to register
+     * @param password plaintext password to hash
+     * @return {@code true} when the user was stored, or {@code false} when the
+     *         username already exists or persistence fails
+     */
     public boolean register(String user, String password) {
         if (playerData != null && playerData.isArray()) {
             for (JsonNode player : playerData) {
@@ -76,6 +91,14 @@ public final class Authenticator {
         return true;
     }
 
+    /**
+     * Verifies credentials and creates a session token on success.
+     *
+     * @param user username to authenticate
+     * @param password plaintext password to verify
+     * @return a newly generated token when authentication succeeds; otherwise
+     *         {@code null}
+     */
     public String login(String user, String password) {
         if (playerData != null && playerData.isArray()) {
             for (JsonNode player : playerData) {

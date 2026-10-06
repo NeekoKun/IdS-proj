@@ -17,6 +17,7 @@ import com.insert_game_name.game.client.events.ClientEvent;
 import com.insert_game_name.game.server.events.*;
 
 
+/** Represents an authenticated player and manages the player's socket I/O. */
 public class Player {
     // Player data
     public static int count = 0;
@@ -34,6 +35,13 @@ public class Player {
     private Future<?> readerTask;
     private Future<?> writerTask;
 
+    /**
+     * Creates a player for an authenticated socket connection.
+     *
+     * @param client_socket socket connected to the client
+     * @param mapper mapper used for event serialization
+     * @param user authenticated username
+     */
     public Player(Socket client_socket, ObjectMapper mapper, String user) {
         id = count++;
         socket = client_socket;
@@ -43,6 +51,7 @@ public class Player {
         username = user;
     }
 
+    /** Queues an event for transmission to the client. @param event event to send */
     public void send(ServerEvent event) {
         outbox.offer(event);
     }
@@ -105,11 +114,18 @@ public class Player {
         }
     }
 
+    /**
+     * Starts the reader and writer tasks for this player's socket.
+     *
+     * @param pool executor that runs the tasks
+     * @param inbox lobby queue receiving decoded client events
+     */
     public void start(ExecutorService pool, LinkedBlockingQueue<PlayerEvent> inbox) {
         readerTask = pool.submit(() -> Reader(inbox));
         writerTask = pool.submit(() -> Writer());
     }
 
+    /** Stops the I/O tasks, clears pending output, and closes the socket. */
     public void stop() {
         if (stopped) {
             return;
@@ -132,7 +148,8 @@ public class Player {
         }
     }
 
+    /** @return the public player state sent to lobby clients */
     public PlayerState state() {
-        return new PlayerState("lol", true);
+        return new PlayerState(username);
     }
 }

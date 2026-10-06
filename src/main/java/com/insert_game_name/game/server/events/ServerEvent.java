@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(value = ServerError.class,       name = "error"),
     @JsonSubTypes.Type(value = ServerOk.class,               name = "ok")
 })
+/** Base type for all events sent from the server to a client. */
 public sealed interface ServerEvent 
         permits 
                 ServerHeartbeat, 

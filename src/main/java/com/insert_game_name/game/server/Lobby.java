@@ -11,6 +11,7 @@ import com.insert_game_name.game.client.events.*;
 import com.insert_game_name.game.server.events.*;
 import com.insert_game_name.game.server.player.*;
 
+/** Coordinates players and processes client events for one lobby. */
 public class Lobby implements Runnable {
     private static int count = 0;
     public int id;
@@ -20,6 +21,11 @@ public class Lobby implements Runnable {
     private LinkedBlockingQueue<PlayerEvent> inbox;
     private int version;
 
+    /**
+     * Creates an empty lobby using the supplied executor for player I/O tasks.
+     *
+     * @param pool executor used to run player reader and writer tasks
+     */
     public Lobby(ExecutorService pool) {
         id = count++;
         lobbyPhase = 0;
@@ -29,6 +35,7 @@ public class Lobby implements Runnable {
     }
 
     @Override 
+    /** Processes queued player events until the lobby thread is interrupted. */
     public void run() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
@@ -77,6 +84,11 @@ public class Lobby implements Runnable {
         }
     }
 
+    /**
+     * Adds a player and starts that player's network tasks.
+     *
+     * @param player player to add
+     */
     public void addPlayer(Player player) {
         players.put(player.username, player);
         if (players.size() == 1) {
@@ -85,12 +97,18 @@ public class Lobby implements Runnable {
         player.start(playerPool, inbox);
     }
 
+    /**
+     * Stops and removes the player identified by the username.
+     *
+     * @param username username of the player to remove
+     */
     public void removePlayer(String username) {
         //TODO: Send a ServerForcedDisconnect event
         players.get(username).stop();
         players.remove(username);
     }
 
+    /** @return a snapshot of the lobby phase and current players */
     public LobbyState state() {
         List<PlayerState> playerStates = new ArrayList<PlayerState>(players.size());
         
@@ -98,7 +116,7 @@ public class Lobby implements Runnable {
             playerStates.add(player.state());
         }
         
-        LobbyState state = new LobbyState(lobbyPhase, playerStates);
+        LobbyState state = new LobbyState(version, this.lobbyPhase, playerStates);
 
         return state;
     }

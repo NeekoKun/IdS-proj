@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insert_game_name.game.client.events.*;
 import com.insert_game_name.game.server.events.*;
 import com.insert_game_name.game.server.LobbyState;
-import com.insert_game_name.game.server.player.PlayerEvent;
 
 import java.util.regex.Matcher;
 
@@ -75,6 +74,7 @@ public class Client {
         }
     }
 
+    /** Processes server events received by the client. */
     private void handleEvents() throws InterruptedException {
         ServerEvent event;
         while (true) {
@@ -186,6 +186,9 @@ public class Client {
     /** Reads and dispatches commands entered through the command-line interface.
      * Should never directly handle the network. Instead, it can push events to an outbox
      * 
+     */
+    /**
+     * Reads commands from the console and queues corresponding client events.
      */
     public void readCli() {
         String[] args;
