@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2026 Leonardo Ricci Mingani (NeekoKun)
+ *
+ * This file is part of IdS-proj.
+ *
+ * IdS-proj is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * IdS-proj is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with IdS-proj. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 package com.insert_game_name.game.server;
 
 import java.util.List;
@@ -49,27 +70,27 @@ public class Lobby implements Runnable {
                             player.send(new ServerOk(clientHello.id(), null));
                         }
                     }
-                    case ClientHeartbeat clientHeartbeatEvent -> {
+                    case ClientHeartbeat _ -> {
                         System.out.println(String.format("[info] User %s called a ClientHeartbeat", player.username));
                     }
-                    case ClientDisconnectAlert clientDisconnectAlert -> {
+                    case ClientDisconnectAlert _ -> {
                         System.out.println(String.format("[info] User %s called a ClientDisconnectAlert", player.username));
                         player.send(new ServerForcedDisconnect(ServerForcedDisconnect.ACCEPTED_DISCONNECT, null));
                     }
-                    case ClientNotificationOffer clientNotificationOffer -> {
+                    case ClientNotificationOffer _ -> {
                         System.out.println(String.format("[info] User %s called a ClientNotificationOffer", player.username));
                         if (!player.lobbyAdmin) break;
                         //TODO: process notification
                     }
-                    case ClientOffer clientOffer -> {
+                    case ClientOffer _ -> {
                         System.out.println(String.format("[info] User %s called a ClientOffer", player.username));
                         //TODO: pass offer to game
                     }
-                    case ClientRequestLobbyState clientRequestLobbyState -> {
+                    case ClientRequestLobbyState _ -> {
                         System.out.println(String.format("[info] User %s called a ClientRequestLobbyState", player.username));
                         player.send(new ServerNotification(this.version, null, this.state()));
                     }
-                    case ClientRequestGameState clientRequestGameState -> {   
+                    case ClientRequestGameState _ -> {   
                         System.out.println(String.format("[info] User %s called a ClientRequestGameState", player.username));
                         player.send(new ServerUpdate(0, null));
                     }

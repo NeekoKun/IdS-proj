@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2026 Leonardo Ricci Mingani (NeekoKun)
+ *
+ * This file is part of IdS-proj.
+ *
+ * IdS-proj is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * IdS-proj is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with IdS-proj. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 package com.insert_game_name.game.client;
 
 import java.io.BufferedReader;
@@ -12,8 +33,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
 
@@ -21,6 +40,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insert_game_name.game.client.events.*;
 import com.insert_game_name.game.server.events.*;
+import com.insert_game_name.game.server.GameState;
 import com.insert_game_name.game.server.LobbyState;
 
 import java.util.regex.Matcher;
@@ -37,6 +57,8 @@ public class Client {
     private Thread inputThread;
     private Thread readerThread;
     private Thread writerThread;
+    private LobbyState lobby;
+    private GameState game;
 
     /**
      * Creates a client and initializes its lobby data and input mode.
@@ -60,7 +82,7 @@ public class Client {
                 input = new Thread(() -> readCli());
                 break;
                 
-            default:
+            default: //Implement TUI and GUI
                 return;
         }
 
@@ -83,29 +105,29 @@ public class Client {
         while (true) {
             event = inbox.take();
             switch (event) {
-                case ServerError error -> {
+                case ServerError _ -> {
                     System.out.println("[+] Received error response from server");
                 }
-                case ServerForcedDisconnect forcedDisconnect -> {
+                case ServerForcedDisconnect _ -> {
                     System.out.println("[+] Received forced disconnect from server");
                     shutdown();
                     System.exit(0);
                     return;
                 }
-                case ServerHeartbeat heartbeat -> {
+                case ServerHeartbeat _ -> {
                     System.out.println("[+] Received heartbeat from server");
                 }
-                case ServerMessage message -> {
+                case ServerMessage _ -> {
                     System.out.println("[+] Received new chat message");
                 }
                 case ServerNotification notification -> {
                     System.out.println("[+] Received new lobby state from server");
                     addLobbyState(notification.lobby());
                 }
-                case ServerOk ok -> {
+                case ServerOk _ -> {
                     System.out.println("[+] Received Ok");
                 }
-                case ServerUpdate update -> {
+                case ServerUpdate _ -> {
                     System.out.println("[+] Received new game state from server");
                 }
             }

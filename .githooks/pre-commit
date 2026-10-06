@@ -1,0 +1,123 @@
+#!/bin/sh
+
+set -eu
+
+marker='SPDX-License-Identifier: GPL-3.0-or-later'
+copyright='Copyright (C) 2026 Leonardo Ricci Mingani (NeekoKun)'
+
+header_for() {
+    case "$1" in
+        *.c|*.cc|*.cpp|*.cs|*.h|*.hh|*.hpp|*.java|*.js|*.jsx|*.kt|*.m|*.php|*.swift|*.ts|*.tsx)
+            cat <<EOF
+/*
+ * $copyright
+ *
+ * This file is part of IdS-proj.
+ *
+ * IdS-proj is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * IdS-proj is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with IdS-proj. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * $marker
+ */
+
+EOF
+            ;;
+        *.go|*.py|*.rb|*.rs|*.sh|*.yaml|*.yml)
+            cat <<EOF
+# $copyright
+#
+# This file is part of IdS-proj.
+#
+# IdS-proj is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# IdS-proj is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with IdS-proj. If not, see <https://www.gnu.org/licenses/>.
+#
+# $marker
+
+EOF
+            ;;
+        *.html|*.md|*.xml)
+            cat <<EOF
+<!--
+  $copyright
+
+  This file is part of IdS-proj.
+
+  IdS-proj is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  IdS-proj is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with IdS-proj. If not, see <https://www.gnu.org/licenses/>.
+
+  $marker
+-->
+
+EOF
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
+
+git diff --cached --name-only --diff-filter=ACMR |
+while IFS= read -r file; do
+    case "$file" in
+        *.c|*.cc|*.cpp|*.cs|*.go|*.h|*.hh|*.hpp|*.html|*.java|*.js|*.jsx|*.kt|*.m|*.md|*.php|*.py|*.rb|*.rs|*.sh|*.swift|*.ts|*.tsx|*.xml|*.yaml|*.yml)
+            ;;
+        *)
+            continue
+            ;;
+    esac
+
+    if git show ":$file" | grep -Fq "$marker"; then
+        continue
+    fi
+
+    if ! grep -Fq "$marker" "$file"; then
+        first_line=$(head -n 1 "$file")
+        case "$first_line" in
+            '#!'*|'<?xml '*)
+                printf '%s\n' "$first_line" > "$tmp"
+                header_for "$file" >> "$tmp"
+                tail -n +2 "$file" >> "$tmp"
+                ;;
+            *)
+                header_for "$file" > "$tmp"
+                cat "$file" >> "$tmp"
+                ;;
+        esac
+        mv "$tmp" "$file"
+    fi
+    git add -- "$file"
+    printf 'Added GPLv3 header to %s\n' "$file"
+done
