@@ -26,4 +26,6 @@ public record ServerError(
     int id,
     int type,
     String message
-) implements ServerEvent {}
+) implements ServerEvent {
+    public static final int INVALID_NOTIFICATION = 0;
+}

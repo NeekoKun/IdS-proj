@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insert_game_name.game.server.events.ServerForcedDisconnect;
+import com.insert_game_name.game.server.lobby.Lobby;
+import com.insert_game_name.game.server.lobby.LobbyPhase;
 import com.insert_game_name.game.server.player.Player;
 
 import java.io.BufferedReader;
@@ -50,7 +52,7 @@ public class Server {
     private static final ExecutorService playerPool = Executors.newVirtualThreadPerTaskExecutor();
     private static Map<String, Player> loggedPlayers = new HashMap<String, Player>();
     private static Path dataDir;
-
+    private static Authenticator auth;
     /**
      * Starts the server, accepts socket connections, and dispatches authentication.
      *
@@ -58,7 +60,7 @@ public class Server {
      */
     public static void main(String[] args) {
         dataDir = dataDir();
-
+        
         if (Files.isDirectory(dataDir)) {
             //Get data from here
         } else {
@@ -69,6 +71,8 @@ public class Server {
                 return;
             }
         }
+
+        auth = new Authenticator(dataDir, MAPPER);
 
         try (ServerSocket serverSocket = new ServerSocket(4321)) {
             serverSocket.setReuseAddress(true);
@@ -101,15 +105,20 @@ public class Server {
         return base.resolve("insert_game_name");
     }
 
-    private static Integer findOrCreateLobby() {
+    private static synchronized void assignToLobby(Player player) {
+        System.out.println("[info] Assigning player " + player.username + " to a lobby...");
         for (Lobby lobby : lobbies.values()) {
-            if (lobby.lobbyPhase == 0) return lobby.id;
+            if (lobby.lobbyPhase == LobbyPhase.OPEN) {
+                lobby.addPlayer(player);
+                return;
+            }
         }
         
+        System.out.println("[info] No open lobbies found, assigning to a new lobby");
         Lobby newLobby = new Lobby(playerPool);
         lobbies.put(newLobby.id, newLobby);
         lobbyPool.submit(newLobby);
-        return newLobby.id;
+        newLobby.addPlayer(player);
     }
 
     private static void handleConnection(Socket connection) throws IOException {
@@ -117,7 +126,6 @@ public class Server {
     
         BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         BufferedWriter out = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-        Authenticator auth = new Authenticator(dataDir, MAPPER);
 
         boolean register;
         boolean result;
@@ -199,8 +207,7 @@ public class Server {
         Player player = new Player(connection, MAPPER, username);
         
         loggedPlayers.put(username, player);
-        Integer lobbyId = findOrCreateLobby();
 
-        lobbies.get(lobbyId).addPlayer(player);
+        assignToLobby(player);
     }
 }

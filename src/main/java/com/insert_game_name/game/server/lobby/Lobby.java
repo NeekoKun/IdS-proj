@@ -19,7 +19,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-package com.insert_game_name.game.server;
+package com.insert_game_name.game.server.lobby;
 
 import java.util.List;
 import java.util.Map;
@@ -31,16 +31,18 @@ import java.util.HashMap;
 import com.insert_game_name.game.client.events.*;
 import com.insert_game_name.game.server.events.*;
 import com.insert_game_name.game.server.player.*;
+import com.insert_game_name.utils.RecordUtil;
 
 /** Coordinates players and processes client events for one lobby. */
 public class Lobby implements Runnable {
     private static int count = 0;
     public int id;
     private final Map<String, Player> players = new HashMap<String, Player>();
-    public int lobbyPhase; // "open", "starting", "playing", "closing", "finished"
+    public LobbyPhase lobbyPhase;
     private ExecutorService playerPool;
     private LinkedBlockingQueue<PlayerEvent> inbox;
     private int version;
+    private Integer playerCount = null;
 
     /**
      * Creates an empty lobby using the supplied executor for player I/O tasks.
@@ -49,7 +51,7 @@ public class Lobby implements Runnable {
      */
     public Lobby(ExecutorService pool) {
         id = count++;
-        lobbyPhase = 0;
+        lobbyPhase = LobbyPhase.NEW;
         version = 0;
         playerPool = pool;
         inbox = new LinkedBlockingQueue<PlayerEvent>();
@@ -60,9 +62,11 @@ public class Lobby implements Runnable {
     public void run() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
+
                 PlayerEvent playerEvent = inbox.take();
                 ClientEvent event = playerEvent.event();
                 Player player = playerEvent.player();
+
                 switch (event) {
                     case ClientHello clientHello -> {
                         if (!player.connected) {
@@ -77,10 +81,16 @@ public class Lobby implements Runnable {
                         System.out.println(String.format("[info] User %s called a ClientDisconnectAlert", player.username));
                         player.send(new ServerForcedDisconnect(ServerForcedDisconnect.ACCEPTED_DISCONNECT, null));
                     }
-                    case ClientNotificationOffer _ -> {
+                    case ClientNotificationOffer notificationOffer -> {
                         System.out.println(String.format("[info] User %s called a ClientNotificationOffer", player.username));
                         if (!player.lobbyAdmin) break;
-                        //TODO: process notification
+                        
+                        if (processNotification(notificationOffer)) {
+                            player.send(new ServerOk(notificationOffer.id(), null));
+                            player.send(new ServerNotification(playerCount, this.state()));
+                        } else {
+                            player.send(new ServerError(notificationOffer.id(), ServerError.INVALID_NOTIFICATION, "The notification offer was deemed invalid by the server"));
+                        }
                     }
                     case ClientOffer _ -> {
                         System.out.println(String.format("[info] User %s called a ClientOffer", player.username));
@@ -88,7 +98,7 @@ public class Lobby implements Runnable {
                     }
                     case ClientRequestLobbyState _ -> {
                         System.out.println(String.format("[info] User %s called a ClientRequestLobbyState", player.username));
-                        player.send(new ServerNotification(this.version, null, this.state()));
+                        player.send(new ServerNotification(null, this.state()));
                     }
                     case ClientRequestGameState _ -> {   
                         System.out.println(String.format("[info] User %s called a ClientRequestGameState", player.username));
@@ -106,15 +116,42 @@ public class Lobby implements Runnable {
     }
 
     /**
+     * Processes a notification offer from an admin
+     * 
+     * @return true if the lobby updated, false otherwise
+     */
+    private boolean processNotification(ClientNotificationOffer notification) {
+        switch (lobbyPhase) {
+            case NEW -> {
+                // Accept the notification if the only differing field is the playerCount
+                if (RecordUtil.differOnlyIn(this.state(), notification.state(), "playerCount")) {
+                    setState(notification.state());
+                    this.lobbyPhase = LobbyPhase.OPEN;
+                }
+            }
+            case OPEN -> {}
+            case CLOSED -> {}
+            case IN_GAME -> {}
+            case FINISHED -> {}
+            case EMPTY -> {}
+        }
+
+        return false;
+    }
+
+    /**
      * Adds a player and starts that player's network tasks.
      *
      * @param player player to add
      */
     public void addPlayer(Player player) {
+        System.out.println("[info] adding player " + player.username + " to lobby " + this.id);
         players.put(player.username, player);
+
         if (players.size() == 1) {
             player.lobbyAdmin = true;
         }
+
         player.start(playerPool, inbox);
     }
 
@@ -124,7 +161,7 @@ public class Lobby implements Runnable {
      * @param username username of the player to remove
      */
     public void removePlayer(String username) {
-        //TODO: Send a ServerForcedDisconnect event
+        players.get(username).disconnect(ServerForcedDisconnect.KICKED, "Removed from the Lobby");
         players.get(username).stop();
         players.remove(username);
     }
@@ -137,8 +174,15 @@ public class Lobby implements Runnable {
             playerStates.add(player.state());
         }
         
-        LobbyState state = new LobbyState(version, this.lobbyPhase, playerStates);
+        LobbyState state = new LobbyState(version, lobbyPhase, playerCount, playerStates);
 
         return state;
+    }
+
+    private void setState(LobbyState state) {
+        this.version++;
+        this.lobbyPhase = state.lobbyPhase();
+        this.playerCount = state.playerCount();
+        // Ignore player states for now
     }
 }

@@ -40,8 +40,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insert_game_name.game.client.events.*;
 import com.insert_game_name.game.server.events.*;
+import com.insert_game_name.game.server.lobby.LobbyState;
 import com.insert_game_name.game.server.GameState;
-import com.insert_game_name.game.server.LobbyState;
 
 import java.util.regex.Matcher;
 

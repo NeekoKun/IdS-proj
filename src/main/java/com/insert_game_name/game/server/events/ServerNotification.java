@@ -21,11 +21,14 @@
 
 package com.insert_game_name.game.server.events;
 
-import com.insert_game_name.game.server.LobbyState;
+import com.insert_game_name.game.server.lobby.LobbyState;
 
-/** Delivers a Lobby State to a client.*/
+/** Delivers a Lobby State to a client.
+ * 
+ * @param type (optional) the type of updated which occurred between the previous LobbyState and this one
+ * @param lobby The LobbyState 
+*/
 public record ServerNotification(
-    int counter, 
     Integer type,
     LobbyState lobby
 ) implements ServerEvent {}

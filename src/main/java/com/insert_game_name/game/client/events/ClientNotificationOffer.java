@@ -21,9 +21,11 @@
 
 package com.insert_game_name.game.client.events;
 
+import com.insert_game_name.game.server.lobby.LobbyState;
+
 /** Application-defined notification (lobby update) sent by a client. */
 public record ClientNotificationOffer(
     int id,
     int type,
-    String data
+    LobbyState state
 ) implements ClientEvent {}

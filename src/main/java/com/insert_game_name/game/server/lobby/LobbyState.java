@@ -19,7 +19,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-package com.insert_game_name.game.server;
+package com.insert_game_name.game.server.lobby;
 
 import java.util.List;
 
@@ -28,9 +28,17 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.insert_game_name.game.server.player.PlayerState;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-/** Immutable snapshot of a lobby and its players. */
+/**
+ * Immutable snapshot of a lobby and its players.
+ *
+ * @param version the update counter of this lobby
+ * @param lobbyPhase the current lobby phase
+ * @param playerCount the target number of player in the lobby to reach before the game can start
+ * @param playerState the states of the players in the lobby
+ */
 public record LobbyState (
     int version,
-    int lobbyPhase,
+    LobbyPhase lobbyPhase,
+    Integer playerCount,
     List<PlayerState> playerState
 ) {}
